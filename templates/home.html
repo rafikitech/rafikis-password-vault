@@ -1,0 +1,171 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rafiki's Password Vault</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="{% static 'main.js' %}" defer></script>
+</head>
+<body>
+
+    <header>
+        <nav>
+            <div class="brand"><a href=""><i class="fa-solid fa-lock" aria-hidden="true"></i>&nbsp;Rafiki's Password Vault</a></div>
+            <ul>
+                <li><a href="">Home</a></li>
+                {% if request.user.is_anonymous %}
+                <li><a href="javascript:;" onclick="displayModal('login-modal');">Login</a></li>
+                <li><a href="javascript:;" onclick="displayModal('signup-modal');">New User</a></li>
+                {% else %}
+                <li><a href="javascript:;" onclick="document.getElementById('logout-button').click();">Logout</a></li>
+                <form hidden="true" action="." method="POST">
+                    {% csrf_token %}  
+                    <input type="submit" id="logout-button" name="logout">
+                </form>
+                <li><a href="javascript:;" onclick="displayModal('add-credentials-modal');">Add New Credentials</a></li>
+                <li><a href="javascript:;" onclick="displayModal('generate-pass-modal');">Generate Password</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </header>
+
+    <!--Display Messages-->
+    {% if messages %}
+        <div class="messages" style="text-align: center;">
+            {% for message in messages %}
+            <p>
+                {% if message.tags == "error" %}
+                    <i class="fa fa-exclamation" aria-hidden="true"></i>              
+                    {% else %}
+                    <i class="fa fa-check" aria-hidden="true"></i>
+                {% endif %} 
+                &nbsp;{{message}}
+            </p>
+            {% endfor %}         
+        </div>
+    {% endif %}
+
+    <!--Email Verification-->
+    {% if code %}
+        <div style="text-align: center;">
+            <form action="." method="POST" role="form">
+                {% csrf_token %}
+                <h2>Please confirm your email address.</h2>
+                <p>A verification code has been sent to your email. Confirm its actually you to access your vault.</p>
+                <input type="text" name="code" placeholder="Enter your 6-digit confirmation code">
+                <input type="text" hidden="true" name="user" value="{{user.username}}">
+                <input type="submit" value="Confirm" name="confirm">
+            </form>
+        </div>
+    {% endif %}
+
+    {% if verify %}
+        <div style="text-align: center;">
+            <form action="." method="POST" role="form">
+                {% csrf_token %}
+                <h2>Please confirm your email address.</h2>
+                <p>A verification code has been sent to your email. Verify to finish subscribing.</p>
+                <input type="text" name="verify" placeholder="Enter your 6-digit verification code">
+                <input type="text" hidden="true" name="user" value="{{user.username}}">
+                <input type="submit" value="Verify" name="subscribe">
+            </form>
+        </div>
+    {% endif %}
+
+    <!--Modals-->
+        <div class="modals-wrapper">
+            <span id="close-modal" title="close"><i class="fa-solid fa-times"></i></span>
+
+            <!--Login Modal-->
+            <div class="modal" id="login-modal">
+                <form action="." role="form" method="POST">
+                    {% csrf_token %}
+                    <h2>Login</h2>
+                    <input type="text" name="username" placeholder="username">
+                    <input type="password" name="password" placeholder="password">
+                    <input type="submit" value="login" name="login-form">
+                </form>
+            </div>
+            <!--SignUp Modal-->
+            <div class="modal" id="signup-modal">
+                <form action="." role="form" method="POST">
+                    {% csrf_token %}  
+                    <h2>New User Registration</h2>
+                    <input type="text" name="username" placeholder="username">
+                    <input type="email" name="email" placeholder="email">
+                    <input type="password" name="password" placeholder="password">
+                    <input type="password" name="password2" placeholder="confirm password">
+                    <input type="submit" value="Register" name="signup-form">
+                </form>
+            </div>
+            
+            <!--Add New Credentials Modal-->
+            <div class="modal" id="add-credentials-modal">
+                <form action="." role="form" method="POST">
+                    {% csrf_token %}
+                    <h2>Add New Credentials</h2>
+                    <input type="text" name="url" placeholder="url of website">
+                    <input type="email" name="email" placeholder="email">
+                    <input type="password" name="password" placeholder="password">
+                    <input type="submit" value="Save" name="add-credentials">
+                </form>
+            </div>
+
+            <!-- Generate Random Password -->
+            <div class="modal" id="generate-pass-modal">
+                <form action="." role="form" method="POST">
+                    {% csrf_token %}
+                    <h2>Generate a Random Password</h2>
+                    <br>
+                    <ul>
+                        <li>Generator supports password length between 8-24 characters</li>
+                        <li>Password include upper case and lower case letters, digits, special characters</li>
+                        <li>Recommend at least 12 characters in length</li>
+                    </ul>
+                    <br>
+                    <label for="pass-length">Enter password length: </label>
+                    <input type="number" name="pass-length" placeholder="12-16 characters recommended" min="8" max="24">
+                    <input type="submit" value="Generate" name="generate">
+                </form>
+
+            </div>
+
+        </div>
+
+        <!-- Container for credential cards-->
+        <div class="container">
+
+            {% for account in credentials %}
+            <div class="card">
+                <div class="actions">&nbsp;Actions <i class="fa fa-arrow-down" aria-hidden="true"></i>
+                    <a href="javascript:;" onclick="document.getElementById('delete-button{{account.id}}').click();" class="action-item">Delete</a>
+                    <form hidden="true" action="." method="POST">
+                        {% csrf_token %}  
+                        <input type="text" hidden="true" name="account-id" value="{{account.id}}">
+                        <input type="submit" hidden="true" id="delete-button{{account.id}}" name="delete">
+                </div>
+                <img height="80" width="80" src="{{account.logo}}" alt="https://cdn.pixabay.com/photo/2016/04/13/14/27/google-chrome-1326908_960_720.png">
+                <div class="name">{{account.name}}</div>
+                <!--Show Credentials -->
+                <input type="email" name="email" value="{{account.email}}">          
+                <input type="text" name="password" value="{{account.password}}">
+                <i class="fas fa-copy copy" id = copy title="Copy to Clipboard"></i>       
+            </div>  
+
+            {% endfor %}
+            
+        </div>
+        
+
+    <footer>
+        <label>"Life Without Worry... You Seek Hakuna Matata"</label>
+    </footer>
+
+</body>
+</html>
+ 
